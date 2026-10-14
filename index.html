@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Suivi objectif mensuel</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f6f7f9;--card:#fff;--tx:#14171c;--mut:#6b7280;--br:#e5e7eb;--ac:#2563eb;--ok:#16a34a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#1a1d24;--tx:#f1f3f6;--mut:#9aa3b2;--br:#2a2f3a;--ac:#60a5fa;--ok:#4ade80}}
+:root[data-theme="dark"]{--bg:#0f1115;--card:#1a1d24;--tx:#f1f3f6;--mut:#9aa3b2;--br:#2a2f3a;--ac:#60a5fa;--ok:#4ade80}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,system-ui,Segoe UI,Roboto,sans-serif}
+main{max-width:560px;margin:0 auto;padding:16px}
+.title{font-size:24px;font-weight:700;border:0;background:transparent;padding:4px 0;margin:4px 0 12px;width:100%}
+.danger{background:transparent;color:#dc2626;border:1px solid #dc2626;width:100%;margin-top:4px}
+input[type=date]{width:auto;flex:none}
+h2{font-size:15px;margin:0 0 10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.card{background:var(--card);border:1px solid var(--br);border-radius:16px;padding:16px;margin-bottom:14px}
+.big{font-size:32px;font-weight:700}
+.mut{color:var(--mut);font-size:14px}
+.bar{height:14px;background:var(--br);border-radius:99px;overflow:hidden;margin:8px 0 4px}
+.bar>i{display:block;height:100%;width:0;background:var(--ac);border-radius:99px;transition:width .4s}
+.bar.ok>i{background:var(--ok)}
+.row{display:flex;gap:8px;align-items:center;margin-top:8px}
+input{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--br);border-radius:10px;padding:10px;min-width:0;width:100%}
+input[type=number]{width:110px;flex:none}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--ac);color:#fff;font-weight:600;flex:none}
+button.x{background:transparent;color:var(--mut);padding:6px 10px;font-size:18px}
+.item{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--br)}
+.lb{display:flex;align-items:center;gap:10px}
+input[type=checkbox]{width:22px;height:22px;padding:0;flex:none}
+.sub{width:100%;font-size:13px;color:var(--mut);display:flex;align-items:center;gap:6px;margin:4px 0 0 32px}
+.pi{width:90px;padding:5px 8px;font-size:14px}
+.item:last-child{border:0}
+.ms{display:flex;justify-content:space-between;font-size:13px;color:var(--mut)}
+.ms b{color:var(--tx)}
+.ms .d{color:var(--ok)}
+</style>
+</head>
+<body>
+<main>
+<input id="month" class="title" placeholder="Mois (ex : Octobre 2026)" oninput="setMonth()">
+
+<div class="card">
+  <h2>Objectif</h2>
+  <div class="row"><input id="goal" type="number" inputmode="decimal" style="width:100%" oninput="setGoal()"><span>€</span></div>
+  <div class="big" id="total" style="margin-top:12px">0 €</div>
+  <div class="mut" id="goalTxt"></div>
+  <div class="bar" id="goalBar"><i></i></div>
+  <div class="ms" id="ms"></div>
+</div>
+
+<div class="card">
+  <h2>Charges</h2>
+  <div class="big" id="chPct">0 %</div>
+  <div class="mut" id="chTxt"></div>
+  <div class="bar" id="chBar"><i></i></div>
+  <div id="chList" style="margin-top:8px"></div>
+  <div class="row"><input id="chName" placeholder="Ex : Loyer"><input id="chAmt" type="number" inputmode="decimal" placeholder="€"><button onclick="addCh()">+</button></div>
+</div>
+
+<div class="card">
+  <h2>Enveloppes</h2>
+  <div id="enList"></div>
+  <div class="row"><input id="enName" placeholder="Ex : Courses"><input id="enAmt" type="number" inputmode="decimal" placeholder="€"><button onclick="addEn()">+</button></div>
+</div>
+
+<div class="card">
+  <h2>Épargne</h2>
+  <div class="big" id="svAmt">0 €</div>
+  <div class="mut" id="svTxt"></div>
+  <div class="bar" id="svBar"><i></i></div>
+</div>
+
+<div class="card">
+  <h2>Mes jours</h2>
+  <div class="row"><input id="dDate" type="date"><input id="dLabel" placeholder="Légende (ex : Coupes du samedi)"></div>
+  <div class="row"><input id="dAmt" type="number" inputmode="decimal" placeholder="Montant (€)" style="width:100%"><button onclick="addDay()">Ajouter</button></div>
+  <div id="dList" style="margin-top:8px"></div>
+</div>
+
+<button class="danger" id="rst" onclick="resetAll()">🗑 Effacer tout l'historique</button>
+<div class="mut" style="text-align:center;margin-top:6px">Tes charges et enveloppes sont conservées.</div>
+</main>
+
+<script>
+const K='suivi-objectif-v2';
+let S={month:'Octobre 2026',goal:5000,charges:[{n:'Loyer',a:630},{n:'Assurance',a:55},{n:'Électricité',a:80},{n:'Assurance voiture',a:120}],env:[{n:'Épargne plaisir',a:150},{n:'Carburant',a:160}],days:[]};
+try{const r=localStorage.getItem(K);if(r)S=JSON.parse(r)}catch(e){}
+const $=id=>document.getElementById(id);
+const eur=n=>Math.round(n).toLocaleString('fr-FR')+' €';
+function save(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
+function setMonth(){S.month=$('month').value;save()}
+function setGoal(){S.goal=parseFloat($('goal').value)||0;save();render()}
+function addCh(){const n=$('chName').value.trim(),a=parseFloat($('chAmt').value);if(!n||!a)return;S.charges.push({n,a});$('chName').value='';$('chAmt').value='';save();render()}
+function addDay(){const a=parseFloat($('dAmt').value);if(!a)return;S.days.push({a,t:$('dDate').value||today(),l:$('dLabel').value.trim()});$('dAmt').value='';$('dLabel').value='';save();render()}
+function addEn(){const n=$('enName').value.trim(),a=parseFloat($('enAmt').value);if(!n||!a)return;S.env.push({n,a});$('enName').value='';$('enAmt').value='';save();render()}
+function delEn(i){S.env.splice(i,1);save();render()}
+const grp=g=>g=='c'?S.charges:S.env;
+function tick(g,i,v){const c=grp(g)[i];c.p=v?c.a:0;save();render()}
+function setP(g,i,v){const c=grp(g)[i];c.p=Math.max(0,Math.min(c.a,parseFloat(v)||0));save();render()}
+function delCh(i){S.charges.splice(i,1);save();render()}
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const fmt=t=>{const d=new Date(t+'T12:00:00');return isNaN(d)?t:d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})};
+let rt;function resetAll(){const b=$('rst');if(b.dataset.c){clearTimeout(rt);S.days=[];save();render();b.dataset.c='';b.textContent="🗑 Effacer tout l'historique";return}
+b.dataset.c=1;b.textContent='Appuie encore pour confirmer';rt=setTimeout(()=>{b.dataset.c='';b.textContent="🗑 Effacer tout l'historique"},4000)}
+function delDay(i){S.days.splice(i,1);save();render()}
+function bar(id,p){const b=$(id);b.firstElementChild.style.width=Math.min(100,p)+'%';b.classList.toggle('ok',p>=100)}
+function render(){
+  const total=S.days.reduce((s,d)=>s+d.a,0),ch=S.charges.reduce((s,c)=>s+c.a,0);
+  const gp=S.goal?total/S.goal*100:0;
+  $('total').textContent=eur(total);
+  $('goalTxt').textContent=Math.round(gp)+' % de l\'objectif · reste '+eur(Math.max(0,S.goal-total));
+  bar('goalBar',gp);
+  const steps=[.25,.5,.75,1].map(f=>S.goal*f);
+  $('ms').innerHTML=steps.map(v=>`<span class="${total>=v?'d':''}"><b>${eur(v)}</b> ${total>=v?'✓':''}</span>`).join('');
+  const P=c=>Math.min(c.a,Math.max(0,c.p||0));
+  const en=S.env.reduce((s,c)=>s+c.a,0),reserved=[...S.charges,...S.env].reduce((s,c)=>s+P(c),0);
+  let left=Math.max(0,total-reserved);
+  const fill=c=>{const f=Math.min(left,c.a-P(c));left-=f;return P(c)+f};
+  const cvC=S.charges.map(fill),cvE=S.env.map(fill);
+  const chCov=cvC.reduce((s,v)=>s+v,0),cp=ch?chCov/ch*100:0;
+  $('chPct').textContent=Math.round(cp)+' %';
+  $('chTxt').textContent=cp>=99.99?'Toutes les charges sont couvertes ✅ ('+eur(ch)+')':eur(chCov)+' / '+eur(ch)+' · reste '+eur(ch-chCov);
+  bar('chBar',cp);
+  const row=(c,i,g,cv)=>`<div class="item"><label class="lb"><input type="checkbox" ${P(c)>=c.a?'checked':''} onchange="tick('${g}',${i},this.checked)"><span>${c.n.replace(/</g,'&lt;')} ${cv>=c.a?'✅':''}</span></label><span>${eur(cv)} / ${eur(c.a)} <button class="x" onclick="${g=='c'?'delCh':'delEn'}(${i})">×</button></span><div class="sub">${g=='c'?'Déjà payé':'Déjà dépensé'} <input class="pi" type="number" inputmode="decimal" value="${P(c)}" onchange="setP('${g}',${i},this.value)"> €${g=='e'?' · reste '+eur(c.a-P(c)):''}</div></div>`;
+  $('chList').innerHTML=S.charges.map((c,i)=>row(c,i,'c',cvC[i])).join('');
+  $('enList').innerHTML=S.env.map((c,i)=>row(c,i,'e',cvE[i])).join('');
+  const sv=Math.max(0,S.goal-ch-en),svGot=Math.max(0,left);
+  $('svAmt').textContent=eur(Math.min(svGot,sv))+' / '+eur(sv);
+  $('svTxt').textContent='Ce qui reste de l\'objectif une fois charges et enveloppes payées';
+  bar('svBar',sv?svGot/sv*100:0);
+  $('dList').innerHTML=S.days.map((d,i)=>({d,i})).sort((x,y)=>(y.d.t||'').localeCompare(x.d.t||'')||y.i-x.i).map(({d,i})=>`<div class="item"><span>${fmt(d.t)}${d.l?'<br><span class="mut">'+d.l.replace(/</g,'&lt;')+'</span>':''}</span><span>${eur(d.a)} <button class="x" onclick="delDay(${i})">×</button></span></div>`).join('')||'<div class="mut">Aucune entrée pour le moment.</div>';
+  if(document.activeElement!==$('goal'))$('goal').value=S.goal;
+}
+$('dDate').value=today();$('month').value=S.month||'';
+render();
+</script>
+</body>
+</html>
